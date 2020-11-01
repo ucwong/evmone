@@ -34,6 +34,18 @@ namespace
     return a <= b;
 }
 
+template <typename T>
+inline auto hash(const T& a) noexcept
+{
+    return std::hash<T>{}(a);
+}
+template <typename T>
+[[gnu::noinline]] inline auto noinline_hash(const T& a) noexcept
+{
+    return std::hash<T>{}(a);
+}
+
+
 constexpr size_t num_operations = 1024;
 constexpr size_t num_samples = num_operations + 1;
 auto rng = std::mt19937{std::random_device{}()};
@@ -129,4 +141,27 @@ BENCHMARK_TEMPLATE(compare_zero2, evmc::address, evmc::operator<=);
 BENCHMARK_TEMPLATE(compare_zero2, evmc::address, noinline_le);
 BENCHMARK_TEMPLATE(compare_zero2, evmc::bytes32, evmc::operator<=);
 BENCHMARK_TEMPLATE(compare_zero2, evmc::bytes32, noinline_le);
+
+
+template <typename T, size_t (*HashFn)(const T&) noexcept>
+void hash_(benchmark::State& state)
+{
+    const auto samples = generate_samples<T>();
+
+    size_t accumulator = 0;
+    for (auto _ : state)
+    {
+        for (size_t i = 0; i < num_operations; ++i)
+        {
+            accumulator |= HashFn(samples[i]);
+        }
+    }
+    benchmark::DoNotOptimize(accumulator);
+}
+
+BENCHMARK_TEMPLATE(hash_, evmc::bytes32, hash<evmc::bytes32>);
+BENCHMARK_TEMPLATE(hash_, evmc::bytes32, noinline_hash<evmc::bytes32>);
+BENCHMARK_TEMPLATE(hash_, evmc::address, hash<evmc::address>);
+BENCHMARK_TEMPLATE(hash_, evmc::address, noinline_hash<evmc::address>);
+
 }  // namespace
