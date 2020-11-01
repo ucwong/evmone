@@ -59,6 +59,7 @@ void compare(benchmark::State& state)
     int accumulator = 0;
     for (auto _ : state)
     {
+#pragma nounroll
         for (size_t i = 0; i < num_operations; ++i)
         {
             accumulator += Op(samples[i], samples[i + 1]);
@@ -76,6 +77,7 @@ void compare_zero1(benchmark::State& state)
     int accumulator = 0;
     for (auto _ : state)
     {
+#pragma nounroll
         for (size_t i = 0; i < num_operations; ++i)
         {
             accumulator += Op(zero, samples[i]);
@@ -93,6 +95,7 @@ void compare_zero2(benchmark::State& state)
     int accumulator = 0;
     for (auto _ : state)
     {
+#pragma nounroll
         for (size_t i = 0; i < num_operations; ++i)
         {
             accumulator += Op(samples[i], zero);
