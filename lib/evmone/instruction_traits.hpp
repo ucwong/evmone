@@ -96,7 +96,7 @@ constexpr std::array<Traits, 256> traits = []() noexcept {
 
     for (auto op = size_t{OP_LOG0}; op <= OP_LOG4; ++op)
     {
-        const auto num_operands = op - OP_LOG0 + 2;
+        const auto num_operands = static_cast<int>(op - OP_LOG0 + 2);
         table[op] = {static_cast<int8_t>(num_operands), static_cast<int8_t>(-num_operands)};
     }
 
@@ -121,7 +121,7 @@ constexpr int16_t undefined = -1;
 
 template <>
 constexpr std::array<int16_t, 256> gas_costs<EVMC_FRONTIER> = []() noexcept {
-    std::array<int16_t, 256> table{};
+    std::array<int16_t, 256> table{{}};
     for (auto& t : table)
         t = undefined;
 
