@@ -333,7 +333,7 @@ constexpr op_table create_op_table() noexcept
     for (size_t i = 0; i < table.size(); ++i)
     {
         auto& t = table[i];
-        const auto gas_cost = instr::gas_cost<Rev>[i];
+        const auto gas_cost = instr::gas_costs<Rev>[i];
         if (gas_cost == instr::undefined)
         {
             t.fn = op_undefined;
@@ -342,7 +342,7 @@ constexpr op_table create_op_table() noexcept
         else
         {
             t.fn = instruction_implementations[i];
-            t.gas_cost = static_cast<int16_t>(gas_cost);
+            t.gas_cost = gas_cost;
             t.stack_req = instr::traits[i].stack_height_required;
             t.stack_change = instr::traits[i].stack_height_change;
         }
