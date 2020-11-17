@@ -3,13 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <evmc/instructions.h>
+#include <array>
 
 namespace evmone::instr
 {
 struct Traits
 {
-    int stack_height_required = 0;
-    int stack_height_change = 0;
+    int8_t stack_height_required = 0;
+    int8_t stack_height_change = 0;
 };
 
 inline constexpr std::array<Traits, 256> traits = []() noexcept {
@@ -87,14 +88,17 @@ inline constexpr std::array<Traits, 256> traits = []() noexcept {
     for (auto op = size_t{OP_PUSH1}; op <= OP_PUSH32; ++op)
         table[op] = {0, 1};
 
-    for (auto op = int{OP_DUP1}; op <= OP_DUP16; ++op)
-        table[static_cast<size_t>(op)] = {op - OP_DUP1 + 1, 1};
+    for (auto op = size_t{OP_DUP1}; op <= OP_DUP16; ++op)
+        table[op] = {static_cast<int8_t>(op - OP_DUP1 + 1), 1};
 
-    for (auto op = int{OP_SWAP1}; op <= OP_SWAP16; ++op)
-        table[static_cast<size_t>(op)] = {op - OP_SWAP1 + 2, 0};
+    for (auto op = size_t{OP_SWAP1}; op <= OP_SWAP16; ++op)
+        table[op] = {static_cast<int8_t>(op - OP_SWAP1 + 2), 0};
 
-    for (auto op = int{OP_LOG0}; op <= OP_LOG4; ++op)
-        table[static_cast<size_t>(op)] = {op - OP_LOG0 + 2, -(op - OP_LOG0 + 2)};
+    for (auto op = size_t{OP_LOG0}; op <= OP_LOG4; ++op)
+    {
+        const auto num_operands = op - OP_LOG0 + 2;
+        table[op] = {static_cast<int8_t>(num_operands), static_cast<int8_t>(-num_operands)};
+    }
 
     table[OP_CREATE] = {3, -2};
     table[OP_CALL] = {7, -6};
@@ -111,13 +115,15 @@ inline constexpr std::array<Traits, 256> traits = []() noexcept {
 }();
 
 template <evmc_revision>
-inline constexpr auto gas_cost = nullptr;
+constexpr auto gas_cost = nullptr;
+
+constexpr int16_t undefined = -1;
 
 template <>
-inline constexpr std::array<int, 256> gas_cost<EVMC_FRONTIER> = []() noexcept {
-    std::array<int, 256> table{};
+inline constexpr std::array<int16_t, 256> gas_cost<EVMC_FRONTIER> = []() noexcept {
+    std::array<int16_t, 256> table{};
     for (auto& x : table)
-        x = -1;
+        x = undefined;
 
     table[OP_STOP] = 0;
     table[OP_ADD] = 3;
@@ -178,13 +184,15 @@ inline constexpr std::array<int, 256> gas_cost<EVMC_FRONTIER> = []() noexcept {
 
     for (auto op = size_t{OP_PUSH1}; op <= OP_PUSH32; ++op)
         table[op] = 3;
+
     for (auto op = size_t{OP_DUP1}; op <= OP_DUP16; ++op)
         table[op] = 3;
+
     for (auto op = size_t{OP_SWAP1}; op <= OP_SWAP16; ++op)
         table[op] = 3;
 
-    for (auto op = int{OP_LOG0}; op <= OP_LOG4; ++op)
-        table[static_cast<size_t>(op)] = (op - OP_LOG0 + 1) * 375;
+    for (auto op = size_t{OP_LOG0}; op <= OP_LOG4; ++op)
+        table[op] = static_cast<int16_t>((op - OP_LOG0 + 1) * 375);
 
     table[OP_CREATE] = 32000;
     table[OP_CALL] = 40;
@@ -196,14 +204,14 @@ inline constexpr std::array<int, 256> gas_cost<EVMC_FRONTIER> = []() noexcept {
 }();
 
 template <>
-inline constexpr std::array<int, 256> gas_cost<EVMC_HOMESTEAD> = []() noexcept {
+inline constexpr std::array<int16_t, 256> gas_cost<EVMC_HOMESTEAD> = []() noexcept {
     auto table = gas_cost<EVMC_FRONTIER>;
     table[OP_DELEGATECALL] = 40;
     return table;
 }();
 
 template <>
-inline constexpr std::array<int, 256> gas_cost<EVMC_TANGERINE_WHISTLE> = []() noexcept {
+inline constexpr std::array<int16_t, 256> gas_cost<EVMC_TANGERINE_WHISTLE> = []() noexcept {
     auto table = gas_cost<EVMC_HOMESTEAD>;
     table[OP_BALANCE] = 400;
     table[OP_EXTCODESIZE] = 700;
@@ -220,7 +228,7 @@ template <>
 inline constexpr auto gas_cost<EVMC_SPURIOUS_DRAGON> = gas_cost<EVMC_TANGERINE_WHISTLE>;
 
 template <>
-inline constexpr std::array<int, 256> gas_cost<EVMC_BYZANTIUM> = []() noexcept {
+inline constexpr std::array<int16_t, 256> gas_cost<EVMC_BYZANTIUM> = []() noexcept {
     auto table = gas_cost<EVMC_SPURIOUS_DRAGON>;
     table[OP_RETURNDATASIZE] = 2;
     table[OP_RETURNDATACOPY] = 3;
@@ -230,7 +238,7 @@ inline constexpr std::array<int, 256> gas_cost<EVMC_BYZANTIUM> = []() noexcept {
 }();
 
 template <>
-inline constexpr std::array<int, 256> gas_cost<EVMC_CONSTANTINOPLE> = []() noexcept {
+inline constexpr std::array<int16_t, 256> gas_cost<EVMC_CONSTANTINOPLE> = []() noexcept {
     auto table = gas_cost<EVMC_BYZANTIUM>;
     table[OP_SHL] = 3;
     table[OP_SHR] = 3;
@@ -244,7 +252,7 @@ template <>
 inline constexpr auto gas_cost<EVMC_PETERSBURG> = gas_cost<EVMC_CONSTANTINOPLE>;
 
 template <>
-inline constexpr std::array<int, 256> gas_cost<EVMC_ISTANBUL> = []() noexcept {
+inline constexpr std::array<int16_t, 256> gas_cost<EVMC_ISTANBUL> = []() noexcept {
     auto table = gas_cost<EVMC_CONSTANTINOPLE>;
     table[OP_BALANCE] = 700;
     table[OP_CHAINID] = 2;
