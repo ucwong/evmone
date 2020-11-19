@@ -23,6 +23,8 @@ namespace evmone::test
 {
 using namespace benchmark;
 
+namespace evmone::test
+{
 namespace
 {
 constexpr auto inputs_extension = ".inputs";
@@ -256,6 +258,7 @@ int main(int argc, char** argv)
         if (ec != 0)
             return ec;
 
+        register_synthetic_benchmarks();
         RunSpecifiedBenchmarks();
         return 0;
     }

@@ -11,6 +11,7 @@ target_sources(
     evmone-bench PRIVATE
     bench.cpp
     helpers.cpp helpers.hpp
+    synthetic_bench.cpp synthetic_bench.hpp
 )
 
 set(HAVE_STD_FILESYSTEM 0)
