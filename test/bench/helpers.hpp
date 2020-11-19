@@ -15,7 +15,7 @@ constexpr auto gas_limit = std::numeric_limits<int64_t>::max();
 
 extern evmc::VM vm;
 
-inline evmc::result execute(bytes_view code, bytes_view input) noexcept
+inline evmc::result execute(bytes_view code, bytes_view input = {}) noexcept
 {
     auto msg = evmc_message{};
     msg.gas = gas_limit;
@@ -24,7 +24,7 @@ inline evmc::result execute(bytes_view code, bytes_view input) noexcept
     return vm.execute(revision, msg, code.data(), code.size());
 }
 
-inline void execute(benchmark::State& state, bytes_view code, bytes_view input) noexcept
+inline void execute(benchmark::State& state, bytes_view code, bytes_view input = {}) noexcept
 {
     auto total_gas_used = int64_t{0};
     auto iteration_gas_used = int64_t{0};

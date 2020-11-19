@@ -54,10 +54,19 @@ bytes generate_code(evmc_opcode opcode, Mode mode) noexcept
     return code;
 }
 
-[[maybe_unused]] bytes generate_loop()
+bytes generate_loop()
 {
     bytecode code =
-        push(100) + OP_JUMPDEST + push(1) + OP_SWAP1 + OP_SUB + OP_DUP1 + push(2) + OP_JUMPI;
+        push(255) + OP_JUMPDEST + push(1) + OP_SWAP1 + OP_SUB + OP_DUP1 + push(2) + OP_JUMPI;
+
+    return std::move(code);
+}
+
+bytes generate_loop2()
+{
+    bytecode code = push(255) + OP_JUMPDEST +
+                    push("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff") +
+                    OP_ADD + OP_DUP1 + push(2) + OP_JUMPI;
 
     return std::move(code);
 }
@@ -91,8 +100,19 @@ bool register_synthetic_benchmarks() noexcept
     })->Unit(kMicrosecond);
 
 
+    RegisterBenchmark("analyse/synth/loop", [](State& state) {
+        analyse(state, generate_loop());
+    })->Unit(kMicrosecond);
     RegisterBenchmark("execute/synth/loop", [](State& state) {
-        execute(state, generate_code(OP_PUSH1, Mode::interleaved), {});
+        execute(state, generate_loop());
+    })->Unit(kMicrosecond);
+
+
+    RegisterBenchmark("analyse/synth/loop2", [](State& state) {
+        analyse(state, generate_loop2());
+    })->Unit(kMicrosecond);
+    RegisterBenchmark("execute/synth/loop2", [](State& state) {
+        execute(state, generate_loop2());
     })->Unit(kMicrosecond);
 
     RegisterBenchmark("execute/synth/push1_interleaved", [](State& state) {
