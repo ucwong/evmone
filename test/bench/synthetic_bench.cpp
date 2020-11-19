@@ -9,12 +9,13 @@ using namespace benchmark;
 
 namespace
 {
-constexpr auto code_size_limit = 25 * 1024;
-// constexpr auto stack_limit = 1024;
+constexpr auto code_size_limit = 40 * 1024;
+constexpr auto stack_limit = 1024;
 
 enum class Mode
 {
     interleaved,
+    full_stack,
 };
 
 bytes generate_code(evmc_opcode opcode, Mode mode) noexcept
@@ -27,6 +28,15 @@ bytes generate_code(evmc_opcode opcode, Mode mode) noexcept
         if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
             std::fill_n(std::back_inserter(pattern), opcode - OP_PUSH1 + 1, 0);
         pattern.push_back(OP_POP);
+        break;
+    case Mode::full_stack:
+        for (int i = 0; i < stack_limit; ++i)
+        {
+            pattern.push_back(opcode);
+            if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
+                std::fill_n(std::back_inserter(pattern), opcode - OP_PUSH1 + 1, 0);
+        }
+        std::fill_n(std::back_inserter(pattern), stack_limit, OP_POP);
         break;
     }
 
@@ -74,29 +84,48 @@ void execute(State& state, evmc_opcode opcode, Mode mode) noexcept
 
 void register_synthetic_benchmarks()
 {
-    RegisterBenchmark("execute/synth/push1_interleaved", [](State& state) {
-      execute(state, OP_PUSH1, Mode::interleaved);
-    })->Unit(kMicrosecond);
-    RegisterBenchmark("execute/synth/push31_interleaved", [](State& state) {
-      execute(state, OP_PUSH31, Mode::interleaved);
-    })->Unit(kMicrosecond);
-    RegisterBenchmark("execute/synth/push32_interleaved", [](State& state) {
-      execute(state, OP_PUSH32, Mode::interleaved);
-    })->Unit(kMicrosecond);
-
     RegisterBenchmark("analyse/synth/push1_interleaved", [](State& state) {
         const auto code = generate_code(OP_PUSH1, Mode::interleaved);
         analyse(state, code);
     })->Unit(kMicrosecond);
-
+    RegisterBenchmark("analyse/synth/push1_full_stack", [](State& state) {
+        const auto code = generate_code(OP_PUSH1, Mode::full_stack);
+        analyse(state, code);
+    })->Unit(kMicrosecond);
     RegisterBenchmark("analyse/synth/push31_interleaved", [](State& state) {
-      const auto code = generate_code(OP_PUSH31, Mode::interleaved);
-      analyse(state, code);
+        const auto code = generate_code(OP_PUSH31, Mode::interleaved);
+        analyse(state, code);
+    })->Unit(kMicrosecond);
+    RegisterBenchmark("analyse/synth/push31_full_stack", [](State& state) {
+        const auto code = generate_code(OP_PUSH31, Mode::full_stack);
+        analyse(state, code);
+    })->Unit(kMicrosecond);
+    RegisterBenchmark("analyse/synth/push32_interleaved", [](State& state) {
+        const auto code = generate_code(OP_PUSH32, Mode::interleaved);
+        analyse(state, code);
+    })->Unit(kMicrosecond);
+    RegisterBenchmark("analyse/synth/push32_full_stack", [](State& state) {
+        const auto code = generate_code(OP_PUSH32, Mode::full_stack);
+        analyse(state, code);
     })->Unit(kMicrosecond);
 
-    RegisterBenchmark("analyse/synth/push32_interleaved", [](State& state) {
-      const auto code = generate_code(OP_PUSH32, Mode::interleaved);
-      analyse(state, code);
+    RegisterBenchmark("execute/synth/push1_interleaved", [](State& state) {
+        execute(state, OP_PUSH1, Mode::interleaved);
+    })->Unit(kMicrosecond);
+    RegisterBenchmark("execute/synth/push1_full_stack", [](State& state) {
+        execute(state, OP_PUSH1, Mode::full_stack);
+    })->Unit(kMicrosecond);
+    RegisterBenchmark("execute/synth/push31_interleaved", [](State& state) {
+        execute(state, OP_PUSH31, Mode::interleaved);
+    })->Unit(kMicrosecond);
+    RegisterBenchmark("execute/synth/push31_full_stack", [](State& state) {
+        execute(state, OP_PUSH31, Mode::full_stack);
+    })->Unit(kMicrosecond);
+    RegisterBenchmark("execute/synth/push32_interleaved", [](State& state) {
+        execute(state, OP_PUSH32, Mode::interleaved);
+    })->Unit(kMicrosecond);
+    RegisterBenchmark("execute/synth/push32_full_stack", [](State& state) {
+        execute(state, OP_PUSH32, Mode::full_stack);
     })->Unit(kMicrosecond);
 }
 }  // namespace evmone::test
