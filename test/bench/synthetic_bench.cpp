@@ -1,4 +1,9 @@
+// evmone: Fast Ethereum Virtual Machine implementation
+// Copyright 2019 The evmone Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 #include "vm.hpp"
+#include "test/utils/bytecode.hpp"
 #include <benchmark/benchmark.h>
 #include <evmc/instructions.h>
 #include <evmone/analysis.hpp>
@@ -47,6 +52,13 @@ bytes generate_code(evmc_opcode opcode, Mode mode) noexcept
         code += pattern;
 
     return code;
+}
+
+bytes generate_loop()
+{
+    bytecode code = push(100) + OP_JUMPDEST + push(1) + OP_SWAP1 + OP_SUB + OP_DUP1 + push(2) + OP_JUMPI;
+
+    return std::move(code);
 }
 
 void analyse(State& state, bytes_view code) noexcept
@@ -107,6 +119,12 @@ void register_synthetic_benchmarks()
     RegisterBenchmark("analyse/synth/push32_full_stack", [](State& state) {
         const auto code = generate_code(OP_PUSH32, Mode::full_stack);
         analyse(state, code);
+    })->Unit(kMicrosecond);
+
+
+
+    RegisterBenchmark("execute/synth/loop", [](State& state) {
+      execute(state, OP_PUSH1, Mode::interleaved);
     })->Unit(kMicrosecond);
 
     RegisterBenchmark("execute/synth/push1_interleaved", [](State& state) {
