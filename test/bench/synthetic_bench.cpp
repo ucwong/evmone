@@ -14,44 +14,48 @@ using namespace benchmark;
 
 namespace
 {
-constexpr auto code_size_limit = 40 * 1024;
-constexpr auto stack_limit = 1024;
+constexpr auto stack_limit = 1023;
 
 enum class Mode
 {
-    interleaved,
+    min_stack,
     full_stack,
 };
 
+const bytes loop_prefix = push(255) + OP_JUMPDEST;
+const bytes loop_suffix = push("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff") +
+                          OP_ADD + OP_DUP1 + push(2) + OP_JUMPI;
+
 bytes generate_code(evmc_opcode opcode, Mode mode) noexcept
 {
-    bytes pattern;
+    if (!(opcode >= OP_PUSH1 && opcode <= OP_PUSH32))
+        return {};
+
+    bytes inner_code;
     switch (mode)
     {
-    case Mode::interleaved:
-        pattern.push_back(opcode);
-        if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
-            std::fill_n(std::back_inserter(pattern), opcode - OP_PUSH1 + 1, 0);
-        pattern.push_back(OP_POP);
+    case Mode::min_stack:
+    {
+        bytes instr_pair;
+        instr_pair.push_back(opcode);
+        std::fill_n(std::back_inserter(instr_pair), opcode - OP_PUSH1 + 1, 0);
+        instr_pair.push_back(OP_POP);
+        for (int i = 0; i < stack_limit; ++i)
+            inner_code += instr_pair;
         break;
+    }
     case Mode::full_stack:
         for (int i = 0; i < stack_limit; ++i)
         {
-            pattern.push_back(opcode);
+            inner_code.push_back(opcode);
             if (opcode >= OP_PUSH1 && opcode <= OP_PUSH32)
-                std::fill_n(std::back_inserter(pattern), opcode - OP_PUSH1 + 1, 0);
+                std::fill_n(std::back_inserter(inner_code), opcode - OP_PUSH1 + 1, 0);
         }
-        std::fill_n(std::back_inserter(pattern), stack_limit, OP_POP);
+        std::fill_n(std::back_inserter(inner_code), stack_limit, OP_POP);
         break;
     }
 
-    auto num_patterns = code_size_limit / pattern.size();
-    bytes code;
-    code.reserve(num_patterns * pattern.size());
-    while (num_patterns-- != 0)
-        code += pattern;
-
-    return code;
+    return loop_prefix + inner_code + loop_suffix;
 }
 
 bytes generate_loop()
@@ -75,7 +79,7 @@ bytes generate_loop2()
 bool register_synthetic_benchmarks() noexcept
 {
     RegisterBenchmark("analyse/synth/push1_interleaved", [](State& state) {
-        const auto code = generate_code(OP_PUSH1, Mode::interleaved);
+        const auto code = generate_code(OP_PUSH1, Mode::min_stack);
         analyse(state, code);
     })->Unit(kMicrosecond);
     RegisterBenchmark("analyse/synth/push1_full_stack", [](State& state) {
@@ -83,7 +87,7 @@ bool register_synthetic_benchmarks() noexcept
         analyse(state, code);
     })->Unit(kMicrosecond);
     RegisterBenchmark("analyse/synth/push31_interleaved", [](State& state) {
-        const auto code = generate_code(OP_PUSH31, Mode::interleaved);
+        const auto code = generate_code(OP_PUSH31, Mode::min_stack);
         analyse(state, code);
     })->Unit(kMicrosecond);
     RegisterBenchmark("analyse/synth/push31_full_stack", [](State& state) {
@@ -91,7 +95,7 @@ bool register_synthetic_benchmarks() noexcept
         analyse(state, code);
     })->Unit(kMicrosecond);
     RegisterBenchmark("analyse/synth/push32_interleaved", [](State& state) {
-        const auto code = generate_code(OP_PUSH32, Mode::interleaved);
+        const auto code = generate_code(OP_PUSH32, Mode::min_stack);
         analyse(state, code);
     })->Unit(kMicrosecond);
     RegisterBenchmark("analyse/synth/push32_full_stack", [](State& state) {
@@ -116,19 +120,19 @@ bool register_synthetic_benchmarks() noexcept
     })->Unit(kMicrosecond);
 
     RegisterBenchmark("execute/synth/push1_interleaved", [](State& state) {
-        execute(state, generate_code(OP_PUSH1, Mode::interleaved), {});
+        execute(state, generate_code(OP_PUSH1, Mode::min_stack), {});
     })->Unit(kMicrosecond);
     RegisterBenchmark("execute/synth/push1_full_stack", [](State& state) {
         execute(state, generate_code(OP_PUSH1, Mode::full_stack), {});
     })->Unit(kMicrosecond);
     RegisterBenchmark("execute/synth/push31_interleaved", [](State& state) {
-        execute(state, generate_code(OP_PUSH31, Mode::interleaved), {});
+        execute(state, generate_code(OP_PUSH31, Mode::min_stack), {});
     })->Unit(kMicrosecond);
     RegisterBenchmark("execute/synth/push31_full_stack", [](State& state) {
         execute(state, generate_code(OP_PUSH31, Mode::full_stack), {});
     })->Unit(kMicrosecond);
     RegisterBenchmark("execute/synth/push32_interleaved", [](State& state) {
-        execute(state, generate_code(OP_PUSH32, Mode::interleaved), {});
+        execute(state, generate_code(OP_PUSH32, Mode::min_stack), {});
     })->Unit(kMicrosecond);
     RegisterBenchmark("execute/synth/push32_full_stack", [](State& state) {
         execute(state, generate_code(OP_PUSH32, Mode::full_stack), {});
