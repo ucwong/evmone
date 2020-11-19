@@ -1,8 +1,8 @@
 // evmone: Fast Ethereum Virtual Machine implementation
-// Copyright 2019 The evmone Authors.
+// Copyright 2019-2020 The evmone Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include "vm.hpp"
+#include "helpers.hpp"
 #include "test/utils/bytecode.hpp"
 #include <benchmark/benchmark.h>
 #include <evmc/instructions.h>
@@ -54,47 +54,16 @@ bytes generate_code(evmc_opcode opcode, Mode mode) noexcept
     return code;
 }
 
-bytes generate_loop()
+[[maybe_unused]] bytes generate_loop()
 {
-    bytecode code = push(100) + OP_JUMPDEST + push(1) + OP_SWAP1 + OP_SUB + OP_DUP1 + push(2) + OP_JUMPI;
+    bytecode code =
+        push(100) + OP_JUMPDEST + push(1) + OP_SWAP1 + OP_SUB + OP_DUP1 + push(2) + OP_JUMPI;
 
     return std::move(code);
 }
-
-void analyse(State& state, bytes_view code) noexcept
-{
-    auto bytes_analysed = uint64_t{0};
-    for (auto _ : state)
-    {
-        auto r = evmone::analyze(EVMC_ISTANBUL, code.data(), code.size());
-        DoNotOptimize(r);
-        bytes_analysed += code.size();
-    }
-    state.counters["size"] = Counter(static_cast<double>(code.size()));
-    state.counters["rate"] = Counter(static_cast<double>(bytes_analysed), Counter::kIsRate);
-}
-
-void execute(State& state, evmc_opcode opcode, Mode mode) noexcept
-{
-    const auto code = generate_code(opcode, mode);
-
-    evmc_message msg{};
-    msg.gas = gas_limit;
-
-    auto total_gas_used = int64_t{0};
-    auto iteration_gas_used = int64_t{0};
-    for (auto _ : state)
-    {
-        const auto r = vm.execute(EVMC_ISTANBUL, msg, code.data(), code.size());
-        iteration_gas_used = gas_limit - r.gas_left;
-        total_gas_used += iteration_gas_used;
-    }
-    state.counters["gas_used"] = Counter(static_cast<double>(iteration_gas_used));
-    state.counters["gas_rate"] = Counter(static_cast<double>(total_gas_used), Counter::kIsRate);
-}
 }  // namespace
 
-void register_synthetic_benchmarks()
+bool register_synthetic_benchmarks() noexcept
 {
     RegisterBenchmark("analyse/synth/push1_interleaved", [](State& state) {
         const auto code = generate_code(OP_PUSH1, Mode::interleaved);
@@ -122,28 +91,31 @@ void register_synthetic_benchmarks()
     })->Unit(kMicrosecond);
 
 
-
     RegisterBenchmark("execute/synth/loop", [](State& state) {
-      execute(state, OP_PUSH1, Mode::interleaved);
+        execute(state, generate_code(OP_PUSH1, Mode::interleaved), {});
     })->Unit(kMicrosecond);
 
     RegisterBenchmark("execute/synth/push1_interleaved", [](State& state) {
-        execute(state, OP_PUSH1, Mode::interleaved);
+        execute(state, generate_code(OP_PUSH1, Mode::interleaved), {});
     })->Unit(kMicrosecond);
     RegisterBenchmark("execute/synth/push1_full_stack", [](State& state) {
-        execute(state, OP_PUSH1, Mode::full_stack);
+        execute(state, generate_code(OP_PUSH1, Mode::full_stack), {});
     })->Unit(kMicrosecond);
     RegisterBenchmark("execute/synth/push31_interleaved", [](State& state) {
-        execute(state, OP_PUSH31, Mode::interleaved);
+        execute(state, generate_code(OP_PUSH31, Mode::interleaved), {});
     })->Unit(kMicrosecond);
     RegisterBenchmark("execute/synth/push31_full_stack", [](State& state) {
-        execute(state, OP_PUSH31, Mode::full_stack);
+        execute(state, generate_code(OP_PUSH31, Mode::full_stack), {});
     })->Unit(kMicrosecond);
     RegisterBenchmark("execute/synth/push32_interleaved", [](State& state) {
-        execute(state, OP_PUSH32, Mode::interleaved);
+        execute(state, generate_code(OP_PUSH32, Mode::interleaved), {});
     })->Unit(kMicrosecond);
     RegisterBenchmark("execute/synth/push32_full_stack", [](State& state) {
-        execute(state, OP_PUSH32, Mode::full_stack);
+        execute(state, generate_code(OP_PUSH32, Mode::full_stack), {});
     })->Unit(kMicrosecond);
+
+    return true;
 }
+
+[[maybe_unsed]] static const auto synthetic_benchmarks_registered = register_synthetic_benchmarks();
 }  // namespace evmone::test
