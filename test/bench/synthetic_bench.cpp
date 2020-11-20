@@ -33,6 +33,12 @@ constexpr bool is_unary_op(evmc_opcode opcode) noexcept
     return trait.stack_height_required == 1 && trait.stack_height_change == 0;
 }
 
+constexpr bool is_binary_op(evmc_opcode opcode) noexcept
+{
+    const auto trait = instr::traits[opcode];
+    return trait.stack_height_required == 2 && trait.stack_height_change == -1;
+}
+
 bytes generate_code(evmc_opcode opcode, Mode mode) noexcept
 {
     bytes inner_code;
@@ -61,6 +67,16 @@ bytes generate_code(evmc_opcode opcode, Mode mode) noexcept
             }
             inner_code.push_back(OP_POP);
         }
+        else if (is_binary_op(opcode))
+        {
+            inner_code.push_back(OP_DUP1);
+            for (int i = 0; i < (stack_limit - 1); ++i)
+            {
+                inner_code.push_back(OP_DUP1);
+                inner_code.push_back(opcode);
+            }
+            inner_code.push_back(OP_POP);
+        }
         break;
     }
     case Mode::full_stack:
@@ -75,6 +91,12 @@ bytes generate_code(evmc_opcode opcode, Mode mode) noexcept
             }
             std::fill_n(std::back_inserter(inner_code), stack_limit, OP_POP);
         }
+        else if (is_binary_op(opcode))
+        {
+            std::fill_n(std::back_inserter(inner_code), stack_limit, OP_DUP1);
+            std::fill_n(std::back_inserter(inner_code), stack_limit - 1, opcode);
+            inner_code.push_back(OP_POP);
+        }
         break;
     }
     }
@@ -85,7 +107,7 @@ bytes generate_code(evmc_opcode opcode, Mode mode) noexcept
 
 bool register_synthetic_benchmarks() noexcept
 {
-    std::vector<evmc_opcode> opcodes{OP_ISZERO, OP_NOT};
+    std::vector<evmc_opcode> opcodes{OP_ADD, OP_ISZERO, OP_NOT};
     for (int i = OP_PUSH1; i <= OP_PUSH32; ++i)
         opcodes.push_back(static_cast<evmc_opcode>(i));
 
