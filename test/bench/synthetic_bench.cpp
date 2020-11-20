@@ -39,8 +39,14 @@ constexpr bool is_binary_op(evmc_opcode opcode) noexcept
     return trait.stack_height_required == 2 && trait.stack_height_change == -1;
 }
 
-bytes generate_code(evmc_opcode opcode, Mode mode) noexcept
+bytes_view generate_code(evmc_opcode opcode, Mode mode) noexcept
 {
+    static bytes cache[256][2]{};
+
+    auto& code = cache[opcode][static_cast<int>(mode)];
+    if (!code.empty())
+        return code;
+
     bytes inner_code;
     switch (mode)
     {
@@ -101,13 +107,14 @@ bytes generate_code(evmc_opcode opcode, Mode mode) noexcept
     }
     }
 
-    return loop_prefix + inner_code + loop_suffix;
+    code = loop_prefix + inner_code + loop_suffix;
+    return code;
 }
 }  // namespace
 
 bool register_synthetic_benchmarks() noexcept
 {
-    std::vector<evmc_opcode> opcodes{OP_ADD, OP_ISZERO, OP_NOT};
+    std::vector<evmc_opcode> opcodes{OP_ADD, OP_SUB, OP_MUL, OP_ISZERO, OP_NOT};
     for (int i = OP_PUSH1; i <= OP_PUSH32; ++i)
         opcodes.push_back(static_cast<evmc_opcode>(i));
 
@@ -118,23 +125,16 @@ bool register_synthetic_benchmarks() noexcept
 
     for (auto opcode : opcodes)
     {
-        RegisterBenchmark(
-            (std::string{"execute/synth/"} + instr::traits[opcode].name + "/min_stack").c_str(),
-            [opcode](State& state) {
-                const auto code = generate_code(opcode, Mode::min_stack);
-                execute(state, code);
-            })
+        const auto name = instr::traits[opcode].name;
+
+        RegisterBenchmark((std::string{"execute/synth/"} + name + "/min_stack").c_str(),
+            [opcode](State& state) { execute(state, generate_code(opcode, Mode::min_stack)); })
             ->Unit(kMicrosecond);
 
         if (!is_unary_op(opcode))
         {
-            RegisterBenchmark(
-                (std::string{"execute/synth/"} + instr::traits[opcode].name + "/full_stack")
-                    .c_str(),
-                [opcode](State& state) {
-                    const auto code = generate_code(opcode, Mode::full_stack);
-                    execute(state, code);
-                })
+            RegisterBenchmark((std::string{"execute/synth/"} + name + "/full_stack").c_str(),
+                [opcode](State& state) { execute(state, generate_code(opcode, Mode::full_stack)); })
                 ->Unit(kMicrosecond);
         }
     }
