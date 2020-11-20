@@ -179,7 +179,7 @@ constexpr auto gas_costs = nullptr;
 constexpr int16_t undefined = -1;
 
 template <>
-constexpr std::array<int16_t, 256> gas_costs<EVMC_FRONTIER> = []() noexcept {
+inline constexpr std::array<int16_t, 256> gas_costs<EVMC_FRONTIER> = []() noexcept {
     std::array<int16_t, 256> table{{}};
     for (auto& t : table)
         t = undefined;
@@ -263,14 +263,14 @@ constexpr std::array<int16_t, 256> gas_costs<EVMC_FRONTIER> = []() noexcept {
 }();
 
 template <>
-constexpr std::array<int16_t, 256> gas_costs<EVMC_HOMESTEAD> = []() noexcept {
+inline constexpr std::array<int16_t, 256> gas_costs<EVMC_HOMESTEAD> = []() noexcept {
     auto table = gas_costs<EVMC_FRONTIER>;
     table[OP_DELEGATECALL] = 40;
     return table;
 }();
 
 template <>
-constexpr std::array<int16_t, 256> gas_costs<EVMC_TANGERINE_WHISTLE> = []() noexcept {
+inline constexpr std::array<int16_t, 256> gas_costs<EVMC_TANGERINE_WHISTLE> = []() noexcept {
     auto table = gas_costs<EVMC_HOMESTEAD>;
     table[OP_BALANCE] = 400;
     table[OP_EXTCODESIZE] = 700;
@@ -284,10 +284,10 @@ constexpr std::array<int16_t, 256> gas_costs<EVMC_TANGERINE_WHISTLE> = []() noex
 }();
 
 template <>
-constexpr auto gas_costs<EVMC_SPURIOUS_DRAGON> = gas_costs<EVMC_TANGERINE_WHISTLE>;
+inline constexpr auto gas_costs<EVMC_SPURIOUS_DRAGON> = gas_costs<EVMC_TANGERINE_WHISTLE>;
 
 template <>
-constexpr std::array<int16_t, 256> gas_costs<EVMC_BYZANTIUM> = []() noexcept {
+inline constexpr std::array<int16_t, 256> gas_costs<EVMC_BYZANTIUM> = []() noexcept {
     auto table = gas_costs<EVMC_SPURIOUS_DRAGON>;
     table[OP_RETURNDATASIZE] = 2;
     table[OP_RETURNDATACOPY] = 3;
@@ -297,7 +297,7 @@ constexpr std::array<int16_t, 256> gas_costs<EVMC_BYZANTIUM> = []() noexcept {
 }();
 
 template <>
-constexpr std::array<int16_t, 256> gas_costs<EVMC_CONSTANTINOPLE> = []() noexcept {
+inline constexpr std::array<int16_t, 256> gas_costs<EVMC_CONSTANTINOPLE> = []() noexcept {
     auto table = gas_costs<EVMC_BYZANTIUM>;
     table[OP_SHL] = 3;
     table[OP_SHR] = 3;
@@ -308,10 +308,10 @@ constexpr std::array<int16_t, 256> gas_costs<EVMC_CONSTANTINOPLE> = []() noexcep
 }();
 
 template <>
-constexpr auto gas_costs<EVMC_PETERSBURG> = gas_costs<EVMC_CONSTANTINOPLE>;
+inline constexpr auto gas_costs<EVMC_PETERSBURG> = gas_costs<EVMC_CONSTANTINOPLE>;
 
 template <>
-constexpr std::array<int16_t, 256> gas_costs<EVMC_ISTANBUL> = []() noexcept {
+inline constexpr std::array<int16_t, 256> gas_costs<EVMC_ISTANBUL> = []() noexcept {
     auto table = gas_costs<EVMC_CONSTANTINOPLE>;
     table[OP_BALANCE] = 700;
     table[OP_CHAINID] = 2;
@@ -322,5 +322,5 @@ constexpr std::array<int16_t, 256> gas_costs<EVMC_ISTANBUL> = []() noexcept {
 }();
 
 template <>
-constexpr auto gas_costs<EVMC_BERLIN> = gas_costs<EVMC_ISTANBUL>;
+inline constexpr auto gas_costs<EVMC_BERLIN> = gas_costs<EVMC_ISTANBUL>;
 }  // namespace evmone::instr
