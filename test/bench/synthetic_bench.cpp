@@ -8,6 +8,7 @@
 #include <evmc/instructions.h>
 #include <evmone/analysis.hpp>
 #include <evmone/instruction_traits.hpp>
+#include <iostream>
 
 namespace evmone::test
 {
@@ -138,6 +139,15 @@ bool register_synthetic_benchmarks() noexcept
                 ->Unit(kMicrosecond);
         }
     }
+
+    if (std::getenv("BENCH_DUMP"))
+    {
+        std::cout << "PUSH16/min_stack:\n"
+                  << hex(generate_code(OP_PUSH16, Mode::min_stack)) << "\n"
+                  << "PUSH16/full_stack:\n"
+                  << hex(generate_code(OP_PUSH16, Mode::full_stack)) << "\n";
+    }
+
     return true;
 }
 
